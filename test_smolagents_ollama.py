@@ -1,7 +1,10 @@
-from smolagents import ToolCallingAgent, LiteLLMModel, tool  
+from smolagents import ToolCallingAgent, LiteLLMModel, tool, Tool, ChatMessage  
 from ollama import Client  
 import os  
 from dotenv import load_dotenv  
+import json
+from utils.llm_logger import LLMLogger
+from typing import List, Dict, Optional, Any
   
 model_list = ['qwen2.5:7b', 'qwen2.5:14b', 'deepseek-r1:7b', 'deepseek-r1:14b', 'deepseek-r1:7b-qwen-distill-q8_0']
 use_model = model_list[0]
@@ -28,15 +31,61 @@ def get_weather(location: str) -> str:
 # 创建本地LLM模型实例  
 class OllamaModel(LiteLLMModel):  
     def __init__(self):  
-        super().__init__(model_id=f"ollama/{use_model}")  
-  
-    def generate(self, messages, tools=None):  
-        response = client.chat(  
-            model=use_model,  
-            messages=messages,  
-            options={"temperature": 0.7}  
-        )  
-        return response['message']['content']  
+        super().__init__(model_id=f"ollama/{use_model}")
+        self.logger = LLMLogger()
+    
+    def get_tool_schema(self, tool: Tool) -> Dict[str, Any]:
+        """将Tool对象转换为API所需的schema格式"""
+        return {
+            "type": "function",
+            "function": {
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": {
+                    "type": "object",
+                    "properties": tool.inputs,
+                    "required": [k for k, v in tool.inputs.items() if not v.get("optional", False)]
+                }
+            }
+        }
+
+    def __call__(
+        self,
+        messages: List[Dict[str, str]],
+        stop_sequences: Optional[List[str]] = None,
+        grammar: Optional[str] = None,
+        tools_to_call_from: Optional[List[Tool]] = None,
+        **kwargs,
+    ) -> ChatMessage:
+        # 记录输入消息
+        self.logger.log_messages(messages)
+        
+        try:
+            # 如果有工具，转换工具格式
+            if tools_to_call_from:
+                tools_schema = [self.get_tool_schema(tool) for tool in tools_to_call_from]
+                kwargs['tools'] = tools_schema
+                kwargs['tool_choice'] = 'auto'  # 让模型自动选择是否使用工具
+            
+            # 调用父类的 __call__ 方法来处理实际的 LLM 调用
+            response = super().__call__(
+                messages=messages,
+                stop_sequences=stop_sequences,
+                grammar=grammar,
+                **kwargs
+            )
+            
+            # 记录响应
+            if isinstance(response, dict):
+                self.logger.log_response(response)
+            else:
+                self.logger.log_response({"content": str(response)})
+            
+            return response
+            
+        except Exception as e:
+            self.logger.log_error(e)
+            raise
   
 # 初始化智能体  
 agent = ToolCallingAgent(  
