@@ -5,6 +5,10 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt5.QtCore import Qt
 from llm_ollama import MODEL_LIST
 from chat_handler import ChatHandler
+from PIL import Image
+from PyQt5.QtGui import QImage, QPixmap
+import numpy as np
+from generate import ImageGenerator
 
 class PosterGUI(QMainWindow):
     def __init__(self):
@@ -134,6 +138,9 @@ class PosterGUI(QMainWindow):
         self.chat_handler = ChatHandler()
         self.setup_chat_connections()
         
+        # 连接开始生成按钮的点击事件
+        self.generate_btn.clicked.connect(self.generate_poster)
+        
     def setup_chat_connections(self):
         """设置聊天相关的信号连接"""
         # 连接发送和清除按钮
@@ -199,6 +206,21 @@ class PosterGUI(QMainWindow):
     def clear_output(self):
         """清除输出"""
         self.llm_output.clear()
+
+    def generate_poster(self):
+        """生成并显示空白图片"""
+        size_str = self.size_combo.currentText()
+        ImageGenerator.poster_generation_process(size_str, self.image_label)
+        
+    def resizeEvent(self, event):
+        """窗口大小改变时重新调整图片大小"""
+        super().resizeEvent(event)
+        if self.image_label.pixmap() is not None:
+            scaled_pixmap = ImageGenerator.scale_pixmap(
+                self.image_label.pixmap(),
+                self.image_label.size()
+            )
+            self.image_label.setPixmap(scaled_pixmap)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
