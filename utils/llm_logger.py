@@ -61,9 +61,9 @@ class LLMLogger:
     def log_conversation_start(self) -> None:
         """记录新会话的开始"""
         self.conversation_counter += 1
-        self.logger.info("\n==================================================")
+        self.logger.info("==================================================")
         self.logger.info(f"Conversation #{self.conversation_counter} Started")
-        self.logger.info("\n==================================================")
+        # self.logger.info("\n==================================================")
 
     def log_messages(self, messages: List[Dict[str, str]]) -> None:
         """记录输入消息"""
@@ -78,14 +78,14 @@ class LLMLogger:
                 self.logger.info(f"Tool Calls:\n{self._format_json(msg['tool_calls'])}")
             if 'tool_call_id' in msg:
                 self.logger.info(f"Tool Call ID: {msg['tool_call_id']}")
-            self.logger.info("---")
+            # self.logger.info("---")
     
     def log_tools(self, tools: Optional[List[Any]]) -> None:
         """记录可用工具信息"""
         if not tools:
             return
         
-        self.logger.info("\n=== Available Tools ===")
+        self.logger.info("=== Available Tools ===")
         for tool in tools:
             try:
                 tool_info = {
@@ -96,11 +96,11 @@ class LLMLogger:
                 self.logger.info(self._format_json(tool_info))
             except AttributeError:
                 self.logger.info(str(tool))
-        self.logger.info("---")
+        # self.logger.info("---")
     
     def log_response(self, response: Any) -> None:
         """记录LLM响应"""
-        self.logger.info("\n=== LLM Response ===")
+        self.logger.info("=== LLM Response ===")
         
         # 尝试提取和格式化响应信息
         try:
@@ -120,7 +120,7 @@ class LLMLogger:
             self.logger.warning(f"Failed to format response: {str(e)}")
             self.logger.info(f"Raw response: {str(response)}")
         
-        self.logger.info("---")
+        # self.logger.info("---")
     
     def log_error(self, error: Exception) -> None:
         """记录错误信息"""
