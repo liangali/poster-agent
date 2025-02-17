@@ -33,21 +33,6 @@ class OllamaModel(LiteLLMModel):
     def __init__(self):  
         super().__init__(model_id=f"ollama/{use_model}")
         self.logger = LLMLogger()
-    
-    def get_tool_schema(self, tool: Tool) -> Dict[str, Any]:
-        """将Tool对象转换为API所需的schema格式"""
-        return {
-            "type": "function",
-            "function": {
-                "name": tool.name,
-                "description": tool.description,
-                "parameters": {
-                    "type": "object",
-                    "properties": tool.inputs,
-                    "required": [k for k, v in tool.inputs.items() if not v.get("optional", False)]
-                }
-            }
-        }
 
     def __call__(
         self,
@@ -56,36 +41,25 @@ class OllamaModel(LiteLLMModel):
         grammar: Optional[str] = None,
         tools_to_call_from: Optional[List[Tool]] = None,
         **kwargs,
-    ) -> ChatMessage:
-        # 记录输入消息
+    ) -> ChatMessage:  
+        # 记录日志
         self.logger.log_messages(messages)
+
+        # 直接调用父类的 __call__ 方法，smolagents 会处理工具转换
+        response = super().__call__(
+            messages=messages,
+            stop_sequences=stop_sequences,
+            grammar=grammar,
+            tools_to_call_from=tools_to_call_from,  # 直接传递工具列表
+            **kwargs
+        )
         
-        try:
-            # 如果有工具，转换工具格式
-            if tools_to_call_from:
-                tools_schema = [self.get_tool_schema(tool) for tool in tools_to_call_from]
-                kwargs['tools'] = tools_schema
-                kwargs['tool_choice'] = 'auto'  # 让模型自动选择是否使用工具
-            
-            # 调用父类的 __call__ 方法来处理实际的 LLM 调用
-            response = super().__call__(
-                messages=messages,
-                stop_sequences=stop_sequences,
-                grammar=grammar,
-                **kwargs
-            )
-            
-            # 记录响应
-            if isinstance(response, dict):
-                self.logger.log_response(response)
-            else:
-                self.logger.log_response({"content": str(response)})
-            
-            return response
-            
-        except Exception as e:
-            self.logger.log_error(e)
-            raise
+        if isinstance(response, dict):
+            self.logger.log_response(response)
+        else:
+            self.logger.log_response({"content": str(response)})
+        
+        return response
   
 # 初始化智能体  
 agent = ToolCallingAgent(  
