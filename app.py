@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QComboBox, QPushButton, QTextEdit, 
-                            QLabel)
+                            QLabel, QSizePolicy)
 from PyQt5.QtCore import Qt
 
 class PosterGUI(QMainWindow):
@@ -40,17 +40,39 @@ class PosterGUI(QMainWindow):
         
         # 第一行控件组
         top_controls = QHBoxLayout()
+        
+        # 创建LLM模型组合控件的容器
+        model_container = QWidget()
+        model_layout = QHBoxLayout(model_container)
+        model_layout.setContentsMargins(0, 0, 0, 0)  # 移除内边距
+        model_layout.setSpacing(0)  # 移除间距
+        model_label = QLabel("LLM模型: ")
+        model_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)  # 右对齐
         self.model_combo = QComboBox()
-        self.model_combo.addItems(["模型1", "模型2", "模型3"])
+        self.model_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # 允许水平扩展
+        self.model_combo.addItems(['qwen2.5:7b', 'qwen2.5:14b', 'deepseek-r1:7b', 'deepseek-r1:14b'])
+        model_layout.addWidget(model_label)
+        model_layout.addWidget(self.model_combo)
         
+        # 创建图片大小组合控件的容器
+        size_container = QWidget()
+        size_layout = QHBoxLayout(size_container)
+        size_layout.setContentsMargins(0, 0, 0, 0)  # 移除内边距
+        size_layout.setSpacing(0)  # 移除间距
+        size_label = QLabel("海报大小: ")
+        size_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)  # 右对齐
         self.size_combo = QComboBox()
-        self.size_combo.addItems(["大", "中", "小"])
+        self.size_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # 允许水平扩展
+        self.size_combo.addItems(["1080x1920", "1920x1080", "1200x1200"])
+        size_layout.addWidget(size_label)
+        size_layout.addWidget(self.size_combo)
         
-        self.load_image_btn = QPushButton("加载原始图片")
+        self.load_image_btn = QPushButton("加载图片")
         
-        top_controls.addWidget(self.model_combo)
-        top_controls.addWidget(self.size_combo)
-        top_controls.addWidget(self.load_image_btn)
+        # 添加所有控件到顶部布局并设置宽度比例
+        top_controls.addWidget(model_container, 4)
+        top_controls.addWidget(size_container, 4)
+        top_controls.addWidget(self.load_image_btn, 2)
         
         # 第二行：LLM输出框
         self.llm_output = QTextEdit()
