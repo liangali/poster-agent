@@ -3,6 +3,8 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QHBoxLayout, QComboBox, QPushButton, QTextEdit, 
                             QLabel, QSizePolicy)
 from PyQt5.QtCore import Qt
+from llm_ollama import MODEL_LIST
+from chat_handler import ChatHandler
 
 class PosterGUI(QMainWindow):
     def __init__(self):
@@ -50,7 +52,7 @@ class PosterGUI(QMainWindow):
         model_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)  # 右对齐
         self.model_combo = QComboBox()
         self.model_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # 允许水平扩展
-        self.model_combo.addItems(['qwen2.5:7b', 'qwen2.5:14b', 'deepseek-r1:7b', 'deepseek-r1:14b'])
+        self.model_combo.addItems(MODEL_LIST)
         model_layout.addWidget(model_label)
         model_layout.addWidget(self.model_combo)
         
@@ -121,6 +123,76 @@ class PosterGUI(QMainWindow):
         # 设置左右两侧比例为1:1
         main_layout.setStretch(0, 1)
         main_layout.setStretch(1, 1)
+        
+        # 初始化聊天处理器
+        self.chat_handler = ChatHandler()
+        self.setup_chat_connections()
+        
+    def setup_chat_connections(self):
+        """设置聊天相关的信号连接"""
+        # 连接发送和清除按钮
+        self.send_btn.clicked.connect(self.send_message)
+        self.clear_btn.clicked.connect(self.clear_output)
+        
+        # 连接聊天处理器的信号
+        self.chat_handler.message_received.connect(self.display_user_message)
+        self.chat_handler.ai_stream.connect(self.update_ai_response)
+        self.chat_handler.ai_finished.connect(self.on_response_finished)
+        self.chat_handler.error_occurred.connect(self.handle_error)
+        
+    def send_message(self):
+        """处理发送消息"""
+        question = self.user_input.toPlainText().strip()
+        if not question:
+            return
+            
+        self.send_btn.setEnabled(False)
+        self.user_input.clear()
+        
+        # 发送消息到聊天处理器
+        current_model = self.model_combo.currentText()
+        self.chat_handler.send_message(question, current_model)
+        
+    def display_user_message(self, message: str):
+        """显示用户消息"""
+        self.llm_output.append("\n【用户】")
+        self.llm_output.append(message)
+        self.llm_output.append("\n【AI助手】\n")
+        
+    def update_ai_response(self, text: str):
+        """更新AI响应"""
+        current_text = self.llm_output.toPlainText()
+        try:
+            last_ai_index = current_text.rindex("【AI助手】")
+            base_text = current_text[:last_ai_index + len("【AI助手】\n")]
+        except ValueError:
+            base_text = current_text
+            
+        self.llm_output.setPlainText(base_text + text)
+        self.llm_output.verticalScrollBar().setValue(
+            self.llm_output.verticalScrollBar().maximum()
+        )
+        
+    def on_response_finished(self):
+        """AI响应完成的处理"""
+        self.send_btn.setEnabled(True)
+        self.llm_output.append("\n" + "="*50 + "\n")
+        
+    def handle_error(self, error_msg: str):
+        """处理错误"""
+        current_text = self.llm_output.toPlainText()
+        try:
+            last_ai_index = current_text.rindex("【AI助手】")
+            base_text = current_text[:last_ai_index + len("【AI助手】\n")]
+        except ValueError:
+            base_text = current_text
+        self.llm_output.setPlainText(base_text)
+        self.llm_output.append(f"错误: {error_msg}")
+        self.send_btn.setEnabled(True)
+        
+    def clear_output(self):
+        """清除输出"""
+        self.llm_output.clear()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
