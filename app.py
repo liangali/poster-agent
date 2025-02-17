@@ -53,6 +53,10 @@ class PosterGUI(QMainWindow):
         self.model_combo = QComboBox()
         self.model_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # 允许水平扩展
         self.model_combo.addItems(MODEL_LIST)
+        # 设置默认模型为'deepseek-r1:7b'
+        default_model = MODEL_LIST[2]
+        default_index = MODEL_LIST.index(default_model)
+        self.model_combo.setCurrentIndex(default_index)
         model_layout.addWidget(model_label)
         model_layout.addWidget(self.model_combo)
         
@@ -70,11 +74,13 @@ class PosterGUI(QMainWindow):
         size_layout.addWidget(self.size_combo)
         
         self.load_image_btn = QPushButton("加载图片")
+        self.generate_btn = QPushButton("开始生成")  # 新增按钮
         
-        # 添加所有控件到顶部布局并设置宽度比例
-        top_controls.addWidget(model_container, 4)
-        top_controls.addWidget(size_container, 4)
-        top_controls.addWidget(self.load_image_btn, 2)
+        # 添加所有控件到顶部布局并设置新的宽度比例
+        top_controls.addWidget(model_container, 3)        # 从4改为3
+        top_controls.addWidget(size_container, 3)         # 从4改为3
+        top_controls.addWidget(self.load_image_btn, 2)    # 保持2
+        top_controls.addWidget(self.generate_btn, 2)      # 新增，比例为2
         
         # 第二行：LLM输出框
         self.llm_output = QTextEdit()
