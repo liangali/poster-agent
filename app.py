@@ -30,6 +30,12 @@ class PosterGUI(QMainWindow):
         
         # 创建左侧部件和布局
         left_widget = QWidget()
+        left_widget.setStyleSheet("""
+            QWidget#leftContainer {
+                border: 1px solid #808080;
+            }
+        """)
+        left_widget.setObjectName("leftContainer")  # 设置对象名称
         left_layout = QVBoxLayout(left_widget)
         
         # 第一行控件组
@@ -74,10 +80,15 @@ class PosterGUI(QMainWindow):
         
         # 创建右侧图片显示区域
         right_widget = QWidget()
+        right_widget.setStyleSheet("""
+            QWidget#rightContainer {
+                border: 1px solid #808080;
+            }
+        """)
+        right_widget.setObjectName("rightContainer")  # 设置对象名称
         right_layout = QVBoxLayout(right_widget)
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
-        self.image_label.setStyleSheet("QLabel { background-color: #f0f0f0; }")
         self.image_label.setText("图片显示区域")
         right_layout.addWidget(self.image_label)
         
