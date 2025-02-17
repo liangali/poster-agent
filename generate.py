@@ -42,8 +42,8 @@ class ImageGenerator:
         )
     
     @staticmethod
-    def poster_generation_process(size_str: str, image_label: QLabel):
-        """生成并显示空白图片"""
+    def generate_blank_poster(size_str: str, target_size) -> QPixmap:
+        """生成并缩放图片"""
         # 解析尺寸字符串
         width, height = map(int, size_str.split('x'))
         
@@ -54,7 +54,18 @@ class ImageGenerator:
         pixmap = ImageGenerator.pil_to_pixmap(blank_image)
         
         # 缩放到合适大小
-        scaled_pixmap = ImageGenerator.scale_pixmap(pixmap, image_label.size())
+        return ImageGenerator.scale_pixmap(pixmap, target_size)
+    
+    @staticmethod
+    def update_poster_image_preview(image_label: QLabel, pixmap: QPixmap):
+        """更新图片预览"""
+        image_label.setPixmap(pixmap)
+    
+    @staticmethod
+    def poster_generation_process(size_str: str, image_label: QLabel):
+        """生成并显示空白图片"""
+        # 生成并缩放图片
+        scaled_pixmap = ImageGenerator.generate_blank_poster(size_str, image_label.size())
         
         # 显示图片
-        image_label.setPixmap(scaled_pixmap) 
+        ImageGenerator.update_poster_image_preview(image_label, scaled_pixmap) 
