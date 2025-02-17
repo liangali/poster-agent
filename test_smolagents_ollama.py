@@ -7,7 +7,7 @@ from utils.llm_logger import LLMLogger
 from typing import List, Dict, Optional, Any
   
 model_list = ['qwen2.5:7b', 'qwen2.5:14b', 'deepseek-r1:7b', 'deepseek-r1:14b', 'deepseek-r1:7b-qwen-distill-q8_0']
-use_model = model_list[1]
+use_model = model_list[3]
 
 # 加载本地环境变量  
 load_dotenv()  
@@ -148,7 +148,27 @@ def compose_final_poster(
 # 创建本地LLM模型实例  
 class OllamaModel(LiteLLMModel):  
     def __init__(self):  
-        super().__init__(model_id=f"ollama/{use_model}")
+        system_prompt = """你是一个智能海报制作助手。在制作海报时，你需要按照以下固定步骤来完成任务：
+
+1. 首先获取商品的完整描述信息，使用 get_product_description 工具
+2. 根据商品信息规划海报布局，使用 plan_poster_layout 工具
+3. 获取商品实物图片的抠图，使用 get_product_image 工具
+4. 获取合适的背景图片，使用 get_background_image 工具
+5. 生成海报文案文本，使用 generate_poster_text 工具
+6. 最后将所有视觉元素整合在一起，使用 compose_final_poster 工具
+
+请严格按照上述步骤顺序执行，每次只调用一个工具，并将上一步的结果用于下一步。
+当需要调用工具时，请使用以下格式：
+{"name": "工具名称", "arguments": {"参数名": "参数值"}}"""
+
+        super().__init__(
+            model_id=f"ollama/{use_model}",
+            model_config={
+                "functions_supported": True,
+                "function_call_supported": True,
+                "system_prompt": system_prompt
+            }
+        )
         self.logger = LLMLogger()
 
     def __call__(
@@ -159,26 +179,58 @@ class OllamaModel(LiteLLMModel):
         tools_to_call_from: Optional[List[Tool]] = None,
         **kwargs,
     ) -> ChatMessage:  
-        # 记录日志
-        self.logger.log_messages(messages)
+        try:
+            # 记录日志
+            self.logger.log_messages(messages)
 
-        # 直接调用父类的 __call__ 方法，smolagents 会处理工具转换
-        response = super().__call__(
-            messages=messages,
-            stop_sequences=stop_sequences,
-            grammar=grammar,
-            tools_to_call_from=tools_to_call_from,  # 直接传递工具列表
-            **kwargs
-        )
-        
-        if isinstance(response, dict):
-            self.logger.log_response(response)
-        else:
-            self.logger.log_response({"content": str(response)})
-        
-        return response
-  
-# 初始化智能体  
+            # 添加工具说明到每个对话中
+            if tools_to_call_from:
+                tools_description = "\n".join([
+                    f"- {tool.name}: {tool.description}" 
+                    for tool in tools_to_call_from
+                ])
+                
+                # 确保第一条消息是系统消息
+                if not messages or messages[0]["role"] != "system":
+                    messages = [
+                        {
+                            "role": "system",
+                            "content": f"""可用工具列表：
+                            {tools_description}
+                            
+                            请记住：
+                            1. 严格按照系统提示中的步骤顺序执行
+                            2. 每次只调用一个工具
+                            3. 将上一步的结果用于下一步
+                            4. 确保完成所有步骤"""
+                        }
+                    ] + messages
+
+            # 调用父类的 __call__ 方法
+            response = super().__call__(
+                messages=messages,
+                stop_sequences=stop_sequences,
+                grammar=grammar,
+                tools_to_call_from=tools_to_call_from,
+                **kwargs
+            )
+            
+            # 记录响应
+            if isinstance(response, dict):
+                self.logger.log_response(response)
+            else:
+                self.logger.log_response({"content": str(response)})
+            
+            return response
+            
+        except Exception as e:
+            self.logger.log_error(f"Error in model call: {str(e)}")
+            return ChatMessage(
+                role="assistant",
+                content="抱歉，处理过程中出现了错误。请重试或换个方式描述您的需求。"
+            )
+
+# 初始化智能体时添加更多配置  
 agent = ToolCallingAgent(  
     tools=[
         get_product_description,
@@ -188,16 +240,24 @@ agent = ToolCallingAgent(
         generate_poster_text,
         compose_final_poster
     ],  
-    model=OllamaModel()  
+    model=OllamaModel()
 )  
   
 # 执行示例对话  
 if __name__ == "__main__":  
-    print("系统已启动，输入'exit'退出")  
+    print("系统已启动，输入'exit'退出")
+    default_query = "制作一个保温杯产品电商商品展示海报"
+    
     while True:  
-        query = input("\n用户提问: ")  
+        query = input("\n用户提问 (直接回车使用默认任务): ").strip()
+        
         if query.lower() == 'exit':  
-            break  
+            break
+        
+        # 如果用户直接按回车，使用默认查询
+        if not query:
+            print(f"\n使用默认任务: {default_query}")
+            query = default_query
           
         response = agent.run(query)  
         print(f"\nAI回复: {response}")  
