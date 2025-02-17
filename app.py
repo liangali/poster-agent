@@ -8,7 +8,7 @@ class PosterGUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Poster Generator")
-        self.setGeometry(100, 100, 1200, 800)
+        self.setGeometry(100, 100, 1800, 1000)
         
         # 设置全局字体
         self.setStyleSheet("""
