@@ -1,7 +1,7 @@
 from PIL import Image
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QLabel
+from PyQt5.QtWidgets import QLabel, QTextEdit, QApplication
 import numpy as np
 from image import ImageProcessing
 from analyze import AnalyzeImage
@@ -82,33 +82,57 @@ class ImageGenerator:
         return description
 
     @staticmethod
-    def poster_generation_process(size_str: str, image_label: QLabel, image_processor: ImageProcessing) -> str:
-        """生成并显示空白图片，如果有输入图片则分析其内容
+    def append_to_output(text_widget: QTextEdit, message: str):
+        """向输出文本框添加消息并立即显示
         
         Args:
-            size_str: str - 尺寸字符串 (例如 "1920x1080")
-            image_label: QLabel - 用于显示图片的标签
-            image_processor: ImageProcessing - 图片处理器实例
-            
-        Returns:
-            str - 如果有输入图片，返回图片分析结果；否则返回空字符串
+            text_widget: QTextEdit - 输出文本框
+            message: str - 要显示的消息
         """
+        text_widget.append(message)
+        # 强制更新UI
+        QApplication.processEvents()
+        # 滚动到底部
+        text_widget.verticalScrollBar().setValue(
+            text_widget.verticalScrollBar().maximum()
+        )
+
+    @staticmethod
+    def poster_generation_process(size_str: str, image_label: QLabel, image_processor: ImageProcessing) -> str:
+        """生成并显示空白图片，如果有输入图片则分析其内容"""
+        # 获取输出文本框引用
+        output_text = image_label.window().findChild(QTextEdit)
+        
         # 生成并缩放图片
+        ImageGenerator.append_to_output(output_text, f"正在生成 {size_str} 尺寸的空白图片...")
         scaled_pixmap = ImageGenerator.generate_blank_poster(size_str, image_label.size())
         
         # 显示图片
+        ImageGenerator.append_to_output(output_text, "正在更新图片预览...")
         ImageGenerator.update_poster_image_preview(image_label, scaled_pixmap)
         
         # 检查是否有输入图片
+        ImageGenerator.append_to_output(output_text, "正在检查输入图片...")
         image_paths = image_processor.get_image_paths()
         if not image_paths:
-            print("错误：没有找到输入图片")
+            ImageGenerator.append_to_output(output_text, "错误：没有找到输入图片")
             return ""
             
         try:
             # 尝试打开第一张图片
+            ImageGenerator.append_to_output(output_text, f"正在打开图片：{image_paths[0]}")
             input_image = Image.open(image_paths[0])
-            return ImageGenerator.understand_input_image(input_image)
+            
+            ImageGenerator.append_to_output(output_text, "正在分析图片内容，请稍候...")
+            result = ImageGenerator.understand_input_image(input_image)
+            
+            # 显示分析结果
+            ImageGenerator.append_to_output(output_text, "\n分析结果：")
+            ImageGenerator.append_to_output(output_text, result)
+            
+            return result
+            
         except Exception as e:
-            print(f"错误：无法打开图片 {image_paths[0]}: {str(e)}")
-            return "" 
+            error_msg = f"错误：无法打开图片 {image_paths[0]}: {str(e)}"
+            ImageGenerator.append_to_output(output_text, error_msg)
+            return ""
