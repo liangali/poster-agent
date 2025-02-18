@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QComboBox, QPushButton, QTextEdit, 
-                            QLabel, QSizePolicy)
+                            QLabel, QSizePolicy, QFileDialog)
 from PyQt5.QtCore import Qt
 from llm_ollama import MODEL_LIST
 from chat_handler import ChatHandler
@@ -9,6 +9,7 @@ from PIL import Image
 from PyQt5.QtGui import QImage, QPixmap
 import numpy as np
 from generate import ImageGenerator
+from image import ImageProcessing  # 添加新的导入
 
 class PosterGUI(QMainWindow):
     def __init__(self):
@@ -140,6 +141,8 @@ class PosterGUI(QMainWindow):
         
         # 连接开始生成按钮的点击事件
         self.generate_btn.clicked.connect(self.generate_poster)
+        self.load_image_btn.clicked.connect(self.load_images)  # 添加按钮连接
+        self.image_processor = ImageProcessing()  # 添加图像处理器实例
         
     def setup_chat_connections(self):
         """设置聊天相关的信号连接"""
@@ -221,6 +224,17 @@ class PosterGUI(QMainWindow):
                 self.image_label.size()
             )
             self.image_label.setPixmap(scaled_pixmap)
+
+    def load_images(self):
+        """处理图片加载"""
+        file_dialog = QFileDialog()
+        file_dialog.setFileMode(QFileDialog.ExistingFiles)
+        file_dialog.setNameFilter("Images (*.png *.jpg *.jpeg *.bmp)")
+        
+        if file_dialog.exec_():
+            file_paths = file_dialog.selectedFiles()
+            if file_paths:
+                self.image_processor.load_images(file_paths)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
