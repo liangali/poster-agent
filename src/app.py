@@ -213,7 +213,7 @@ class PosterGUI(QMainWindow):
     def generate_poster(self):
         """生成并显示空白图片"""
         size_str = self.size_combo.currentText()
-        ImageGenerator.poster_generation_process(size_str, self.image_label)
+        ImageGenerator.poster_generation_process(size_str, self.image_label, self.image_processor)
         
     def resizeEvent(self, event):
         """窗口大小改变时重新调整图片大小"""
