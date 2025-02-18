@@ -64,23 +64,15 @@ class AnalyzeImage:
 
         # Handle single image case
         if not isinstance(image, list):
-            image = [image]
+            msgs = [{"role": "user", "content": question}]
+            image_param = image
+        else:
+            msgs = [{"role": "user", "content": image + [question]}]
+            image_param = None
 
-        # Prepare messages
-        msgs = [{"role": "user", "content": question}]
-
-        # Process inputs using the model's processor
-        inputs = self.ov_model.processor(
-            [msgs],  # Batch of 1
-            [image],  # Batch of 1
-            max_slice_nums=2,
-            use_image_id=False,
-            return_tensors="pt"
-        )
-
-        # Call the model's chat method
+        # 直接调用chat方法，不再使用processor预处理
         response = self.ov_model.chat(
-            image=image,
+            image=image_param,
             msgs=msgs,
             tokenizer=self.tokenizer,
             sampling=sampling,
